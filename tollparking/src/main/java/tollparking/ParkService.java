@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import tollparking.data.Bill;
 import tollparking.data.Car;
@@ -56,20 +58,34 @@ public class ParkService {
 		
 		Parking p = PARKING_MAP.get(parkCode);
 		
-		synchronized (p) {
-			try {
-				slotToFind = p.getSlots().stream() //Set<Slot>
+		// check if a car is already present
+		Set<Slot> listSlot = PARKING_MAP.get(parkCode).getSlots().stream()
 				.filter(slot -> {
-					if (slot.getCar() == null && slot.getType().equals(car.type)) {
+					if (car.equals(slot.getCar())) {
 						return true;
 					}
 					return false;
-				}).findAny().get(); //.collect(Collectors.toSet());
-				slotToFind.setDateIn(new Date());
-				slotToFind.setCar(car);
-				PARKING_MAP.get(parkCode).getSlots().add(slotToFind);
-			} catch (NoSuchElementException e) {
-				e.printStackTrace();
+				}).collect(Collectors.toSet());
+		
+		if (listSlot.size() == 1) {
+			slotToFind = listSlot.iterator().next();
+		}else {
+		
+			synchronized (p) {
+				try {
+					slotToFind = p.getSlots().stream()
+				    .filter(slot -> {
+						if (slot.getCar() == null && slot.getType().equals(car.type)) {
+							return true;
+						}
+						return false;
+					}).findAny().get(); 
+					slotToFind.setDateIn(new Date());
+					slotToFind.setCar(car);
+					PARKING_MAP.get(parkCode).getSlots().add(slotToFind);
+				} catch (NoSuchElementException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
@@ -86,23 +102,23 @@ public class ParkService {
 	public static Bill checkOutPark(String parkCode, Car car) {
 		Slot slotToFind = null;
 		Bill bill = null;
-		if (!PARKING_MAP.containsKey(parkCode)) {
-			return bill;
+		if (PARKING_MAP.containsKey(parkCode)) {
+			try {
+				slotToFind = PARKING_MAP.get(parkCode).getSlots().stream()
+				.filter(slot -> {
+					if (car.equals(slot.getCar())) {
+						return true;
+					}
+					return false;
+				}).findFirst().get();
+				slotToFind.setCar(null);
+				bill = PARKING_MAP.get(parkCode).getPayMethod().pay(slotToFind);
+			} catch (NoSuchElementException e) {
+				// car no present in the park! 
+			}
 		}
+		return bill;
 		
-		try {
-			slotToFind = PARKING_MAP.get(parkCode).getSlots().stream()
-			.filter(slot -> {
-				if (car.equals(slot.getCar())) {
-					return true;
-				}
-				return false;
-			}).findFirst().get();
-			slotToFind.setCar(null);
-		} catch (NoSuchElementException e) {
-			e.printStackTrace();
-		}
-		return PARKING_MAP.get(parkCode).getPayMethod().pay(slotToFind);
 	}
 	
 	

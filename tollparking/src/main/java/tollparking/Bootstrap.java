@@ -38,12 +38,10 @@ public class Bootstrap
 	  private static Server startHttp(String httpAddress, int httpPort, final Set<Object> singletons) throws Exception {
 	    
 	    URI baseUri = UriBuilder.fromUri("http://"+httpAddress+"/").port(httpPort).build();
-	    
 	    Server server = JettyHttpContainerFactory.createServer(baseUri, new ResourceConfig()
     		.register(MyObjectMapperProvider.class)
 	        .registerInstances(singletons),
 	        false);
-	    
 	    HandlerWrapper hw = new HandlerWrapper() {
 	        @Override
 	        public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response)
@@ -51,7 +49,6 @@ public class Bootstrap
 	            super.handle(target, baseRequest, request, response);
 	        }
 	      };
-	      
         hw.setHandler(server.getHandler());
       
         server.setHandler(hw);
@@ -66,7 +63,7 @@ public class Bootstrap
     {
     	
     	if (args.length != 1) {
-	      System.err.println("No port to use. Usage: bootstrap port");
+	      System.err.println("No port specified. Usage: java -jar toolparking.jar port");
 	      System.exit(1);
 	    }
     	
@@ -74,10 +71,12 @@ public class Bootstrap
     	Set<Object> endpoints = new HashSet<>();
     	endpoints.add(new ParkRest());
     	try {
+    		System.out.println("Starting server...");
 			startHttp(
-			        "127.0.0.1",
+			        "0.0.0.0",
 			        Integer.valueOf(args[0]),
 			        endpoints);
+			System.out.println("Server started on localhost:" + args[0]);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
